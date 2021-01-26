@@ -1,5 +1,6 @@
 const express = require("express");
 const bodyParser = require("body-parser");
+const routes = require("./routes");
 
 const app = express();
 
@@ -8,6 +9,8 @@ app.use(bodyParser.json());
 app.get("/", (req, res) => {
     return res.send("Welcome to Andela Project: TEAMWORK");
 })
+
+app.use("/api", routes);
 
 app.use((req, res, next) => {
     let error = new Error("Page Not Found");
