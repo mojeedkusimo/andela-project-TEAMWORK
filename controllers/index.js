@@ -3,8 +3,8 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const db = require("../db");
 
+let secret= 'SECRETE';
 let createUser = async (req, res, next) => {
-    // 
     try {
         let { firstname, lastname, email, password, gender, jobrole, department,address, isadmin } = req.body;
 
@@ -15,10 +15,17 @@ let createUser = async (req, res, next) => {
 
         let userObj = user.rows[0];
 
+        let userToken = { firstname, lastname, email, isadmin };
+        let token = jwt.sign(userToken, secret);
+
 
         return res.json({
             status: "success",
-            data: [userObj]
+            data: {
+                message: "User account successfully created",
+                token,
+                userId: userObj.id
+            }
         })
     }
     catch (e) {
@@ -26,8 +33,44 @@ let createUser = async (req, res, next) => {
     }
 }
 
-let signIn = () => {
-    
+let signIn = async (req, res, next) => {
+    try {
+        const { email, password } = req.body;
+        let user = await db.query("SELECT * FROM users WHERE email = $1", [email]);
+        let userObj = user.rows[0];
+
+        if ( !userObj ) {
+            return res.json({
+                status: 'error',
+                error: 'Invalid email'
+            })
+        }
+
+        let hashedPassword = await bcrypt.compare(password, userObj.password);
+        
+        if ( !hashedPassword ) {
+            return res.json({
+                status: 'error',
+                error: 'Incorrect password'
+            })
+        }
+
+        let { id, firstname, lastname, isadmin } = userObj;
+        let userToken = { id, firstname, lastname, email, isadmin };
+        let token = jwt.sign(userToken, secret);
+
+        console.log(token);
+        return res.json({
+            status: 'success',
+            data: {
+                token,
+                userId: id
+            }
+        })
+    }
+    catch (e) {
+        return next(e);
+    }
 }
 
 
