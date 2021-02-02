@@ -18,7 +18,6 @@ let createUser = async (req, res, next) => {
         let userToken = { firstname, lastname, email, isadmin };
         let token = jwt.sign(userToken, secret);
 
-
         return res.json({
             status: "success",
             data: {
@@ -57,7 +56,7 @@ let signIn = async (req, res, next) => {
 
         let { id, firstname, lastname, isadmin } = userObj;
         let userToken = { id, firstname, lastname, email, isadmin };
-        let token = jwt.sign(userToken, secret);
+        let token = jwt.sign(userToken, secret, { expiresIn: 1* 60 });
 
         console.log(token);
         return res.json({
@@ -73,7 +72,26 @@ let signIn = async (req, res, next) => {
     }
 }
 
+let postGif = async (req, res, next) => {
+    try {
+        let { image, title } = req.body;
+
+        return res.json({
+            status: "success",
+            data: {
+                gifId: "GIF ID",
+                message: "GIF image successfully posted",
+                createdOn: "Time created",
+                title,
+                imageUrl: image
+            }
+        })
+    }
+    catch (e) {
+        return next(e);
+    }
+}
 
 module.exports = {
-    createUser, signIn
+    createUser, signIn, postGif
 }
