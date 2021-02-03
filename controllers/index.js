@@ -56,7 +56,7 @@ let signIn = async (req, res, next) => {
 
         let { id, firstname, lastname, isadmin } = userObj;
         let userToken = { id, firstname, lastname, email, isadmin };
-        let token = jwt.sign(userToken, secret, { expiresIn: 1* 60 });
+        let token = jwt.sign(userToken, secret);
 
         console.log(token);
         return res.json({
@@ -76,14 +76,21 @@ let postGif = async (req, res, next) => {
     try {
         let { image, title } = req.body;
 
+        // let time = await db.query('SELECT NOW()');
+        let time = await db.query('SELECT NOW()');
+        console.log(typeof(time), ': ', time.rows[0].now);
+        let gif = await db.query('INSERT INTO gifs (gif_title, gif_url, createdon) VALUES ($1, $2, $3) RETURNING *', [title, image, time.rows[0].now]);
+
+        let { gif_id, gif_title, gif_url, createdOn } = gif.rows[0];
+
         return res.json({
             status: "success",
             data: {
-                gifId: "GIF ID",
+                gifId: gif_id,
                 message: "GIF image successfully posted",
-                createdOn: "Time created",
-                title,
-                imageUrl: image
+                createdOn,
+                title: gif_title, 
+                imageUrl: gif_url
             }
         })
     }
