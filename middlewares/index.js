@@ -40,12 +40,8 @@ let isLoggedIn = (req, res, next) => {
 
         let userObj = jwt.verify(token.split(" ")[1], 'SECRETE');
 
-        // if ( !userObj ) {
-        //     return res.json({
-        //         status: 'error',
-        //         error: 'Kindly log in...'
-        //     })
-        // }
+        req.userObj = userObj;
+
         return next();   
     }
     catch (e) {

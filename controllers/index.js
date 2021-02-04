@@ -76,19 +76,19 @@ let postGif = async (req, res, next) => {
     try {
         let { image, title } = req.body;
 
-        // let time = await db.query('SELECT NOW()');
-        let time = await db.query('SELECT NOW()');
-        console.log(typeof(time), ': ', time.rows[0].now);
-        let gif = await db.query('INSERT INTO gifs (gif_title, gif_url, createdon) VALUES ($1, $2, $3) RETURNING *', [title, image, time.rows[0].now]);
+        let timeCreated = await db.query('SELECT NOW()');
 
-        let { gif_id, gif_title, gif_url, createdOn } = gif.rows[0];
+
+        let gif = await db.query('INSERT INTO gifs (gif_title, gif_url, createdon) VALUES ($1, $2, $3) RETURNING *', [title, image, timeCreated.rows[0].now]);
+
+        let { gif_id, gif_title, gif_url, createdon } = gif.rows[0];
 
         return res.json({
             status: "success",
             data: {
                 gifId: gif_id,
                 message: "GIF image successfully posted",
-                createdOn,
+                createdOn: createdon,
                 title: gif_title, 
                 imageUrl: gif_url
             }
@@ -99,6 +99,32 @@ let postGif = async (req, res, next) => {
     }
 }
 
+let postArticle = async (req, res, next) => {
+    try {
+        let { title, article } = req.body;
+
+        let timeCreated = await db.query('SELECT NOW()');
+
+
+        let articleRes = await db.query('INSERT INTO articles (article_title, article_body, posted_by, createdon) VALUES ($1, $2, $3, $4) RETURNING *', [title, article, req.userObj.id, timeCreated.rows[0].now]);
+
+        let { article_id, article_title, createdon } = articleRes.rows[0];
+
+        return res.json({
+            status: "success",
+            data: {
+                message: "Article successfully posted",
+                articleId: article_id,
+                createdOn: createdon,
+                title: article_title
+            }
+        })
+    }
+    catch (e) {
+        return next(e);
+    }
+}
+
 module.exports = {
-    createUser, signIn, postGif
+    createUser, signIn, postGif, postArticle
 }
