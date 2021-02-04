@@ -1,4 +1,3 @@
-const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const db = require("../db");
@@ -54,8 +53,8 @@ let signIn = async (req, res, next) => {
             })
         }
 
-        let { id, firstname, lastname, isadmin } = userObj;
-        let userToken = { id, firstname, lastname, email, isadmin };
+        let { user_id, firstname, lastname, isadmin } = userObj;
+        let userToken = { user_id, firstname, lastname, email, isadmin };
         let token = jwt.sign(userToken, secret);
 
         console.log(token);
@@ -63,7 +62,7 @@ let signIn = async (req, res, next) => {
             status: 'success',
             data: {
                 token,
-                userId: id
+                userId: user_id
             }
         })
     }
@@ -79,7 +78,7 @@ let postGif = async (req, res, next) => {
         let timeCreated = await db.query('SELECT NOW()');
 
 
-        let gif = await db.query('INSERT INTO gifs (gif_title, gif_url, createdon) VALUES ($1, $2, $3) RETURNING *', [title, image, timeCreated.rows[0].now]);
+        let gif = await db.query('INSERT INTO gifs (gif_title, gif_url, createdon, posted_by_user_id) VALUES ($1, $2, $3, $4) RETURNING *', [title, image, timeCreated.rows[0].now, req.userObj.user_id]);
 
         let { gif_id, gif_title, gif_url, createdon } = gif.rows[0];
 
@@ -104,9 +103,7 @@ let postArticle = async (req, res, next) => {
         let { title, article } = req.body;
 
         let timeCreated = await db.query('SELECT NOW()');
-
-
-        let articleRes = await db.query('INSERT INTO articles (article_title, article_body, posted_by, createdon) VALUES ($1, $2, $3, $4) RETURNING *', [title, article, req.userObj.id, timeCreated.rows[0].now]);
+        let articleRes = await db.query('INSERT INTO articles (article_title, article_body, posted_by_user_id, createdon) VALUES ($1, $2, $3, $4) RETURNING *', [title, article, req.userObj.user_id, timeCreated.rows[0].now]);
 
         let { article_id, article_title, createdon } = articleRes.rows[0];
 
@@ -125,6 +122,88 @@ let postArticle = async (req, res, next) => {
     }
 }
 
+let editArticle = async (req, res, next) => {
+    try {
+        let { title, article } = req.body;
+
+        let articleRes = await db.query('UPDATE articles SET article_title=$1, article_body=$2 WHERE article_id=$3 AND posted_by_user_id=$4 RETURNING *', [title, article, req.params.articleId, req.userObj.user_id]);
+
+        if ( !articleRes.rows[0] ) {
+            return res.json({
+                status: "error",
+                data: {
+                    message: "Access Denied!"
+                }
+            })
+        }
+
+        let { article_title, article_body } = articleRes.rows[0];
+
+        return res.json({
+            status: "success",
+            data: {
+                message: "Article successfully updated",
+                title: article_title,
+                article: article_body
+            }
+        })
+    }
+    catch (e) {
+        return next(e);
+    }
+}
+
+let deleteArticle = async (req, res, next) => {
+    try {
+        let articleRes = await db.query('DELETE FROM articles WHERE article_id=$1 AND posted_by_user_id=$2 RETURNING *', [req.params.articleId, req.userObj.user_id]);
+
+        if ( !articleRes.rows[0] ) {
+            return res.json({
+                status: "error",
+                data: {
+                    message: "Access Denied!"
+                }
+            })
+        }
+
+        return res.json({
+            status: "success",
+            data: {
+                message: "Article successfully deleted"
+            }
+        })
+    }
+    catch (e) {
+        return next(e);
+    }
+}
+
+let deleteGif = async (req, res, next) => {
+    try {
+        let articleRes = await db.query('DELETE FROM gifs WHERE gif_id=$1 AND posted_by_user_id=$2 RETURNING *', [req.params.gifId, req.userObj.user_id]);
+        
+        if ( !articleRes.rows[0] ) {
+            return res.json({
+                status: "error",
+                data: {
+                    message: "Access Denied!"
+                }
+            })
+        }
+
+        return res.json({
+            status: "success",
+            data: {
+                message: "gif post successfully deleted"
+            }
+        })
+    }
+    catch (e) {
+        return next(e);
+    }
+}
+
+
 module.exports = {
-    createUser, signIn, postGif, postArticle
+    createUser, signIn, postGif, postArticle, editArticle, deleteArticle, deleteGif
 }
