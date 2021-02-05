@@ -14,7 +14,8 @@ let createUser = async (req, res, next) => {
 
         let userObj = user.rows[0];
 
-        let userToken = { firstname, lastname, email, isadmin };
+        let { user_id } = userObj;
+        let userToken = { user_id, firstname, lastname, email, isadmin };
         let token = jwt.sign(userToken, secret);
 
         return res.json({
@@ -22,7 +23,7 @@ let createUser = async (req, res, next) => {
             data: {
                 message: "User account successfully created",
                 token,
-                userId: userObj.id
+                userId: user_id
             }
         })
     }
@@ -101,7 +102,7 @@ let postGif = async (req, res, next) => {
 let postArticle = async (req, res, next) => {
     try {
         let { title, article } = req.body;
-
+        console.log("Request from controller:\n ",req.userObj);
         let timeCreated = await db.query('SELECT NOW()');
         let articleRes = await db.query('INSERT INTO articles (article_title, article_body, posted_by_user_id, createdon) VALUES ($1, $2, $3, $4) RETURNING *', [title, article, req.userObj.user_id, timeCreated.rows[0].now]);
 
@@ -203,7 +204,29 @@ let deleteGif = async (req, res, next) => {
     }
 }
 
+let commentArticle = async (req, res, next) => {
+    try {
+        let comment = req.body.comment;
+
+        let timeCreated = await db.query('SELECT NOW()');
+        let commentRes = await db.query('INSERT INTO comments (article_id,user_id, comment, createdon) VALUES ($1, $2, $3, $4) RETURNING *', [req.params.articleId, req.userObj.user_id, comment, timeCreated.rows[0].now]);
+
+        let { article_id, article_title, createdon } = articleRes.rows[0];
+
+        return res.json({
+            status: "success",
+            data: {
+                message: "Comment successfully created",
+                createdOn: createdon,
+                title: article_title
+            }
+        })
+    }
+    catch (e) {
+        return next(e);
+    }
+}
 
 module.exports = {
-    createUser, signIn, postGif, postArticle, editArticle, deleteArticle, deleteGif
+    createUser, signIn, postGif, postArticle, editArticle, deleteArticle, deleteGif, commentArticle
 }

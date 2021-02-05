@@ -1,5 +1,5 @@
 const router = require("express").Router();
-const { createUser, signIn, postGif, postArticle, editArticle, deleteArticle, deleteGif } = require("../controllers/");
+const { createUser, signIn, postGif, postArticle, editArticle, deleteArticle, deleteGif, commentArticle } = require("../controllers/");
 const { adminRoutes, isLoggedIn } = require("../middlewares")
 
 router.post("/auth/create-user", adminRoutes, createUser)
@@ -9,5 +9,6 @@ router.post("/auth/create-user", adminRoutes, createUser)
       .patch("/articles/:articleId", isLoggedIn, editArticle)
       .delete("/articles/:articleId", isLoggedIn, deleteArticle)
       .delete("/gifs/:gifId", isLoggedIn, deleteGif)
+      .post("/articles/:articleId/comment", isLoggedIn, commentArticle)
 
 module.exports = router;
