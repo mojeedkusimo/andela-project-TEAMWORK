@@ -81,6 +81,8 @@ let postGif = async (req, res, next) => {
 
         let gif = await db.query('INSERT INTO gifs (gif_title, gif_url, createdon, posted_by_user_id) VALUES ($1, $2, $3, $4) RETURNING *', [title, image, timeCreated.rows[0].now, req.userObj.user_id]);
 
+        let feed = await db.query("INSERT INTO feed (createdon, title, article_url, authorid) VALUES ($1, $2, $3, $4)", [timeCreated.rows[0].now, title, image, req.userObj.user_id ]);
+
         let { gif_id, gif_title, gif_url, createdon } = gif.rows[0];
 
         return res.json({
@@ -105,6 +107,8 @@ let postArticle = async (req, res, next) => {
         console.log("Request from controller:\n ",req.userObj);
         let timeCreated = await db.query('SELECT NOW()');
         let articleRes = await db.query('INSERT INTO articles (article_title, article_body, posted_by_user_id, createdon) VALUES ($1, $2, $3, $4) RETURNING *', [title, article, req.userObj.user_id, timeCreated.rows[0].now]);
+
+        let feed = await db.query("INSERT INTO feed (createdon, title, article_url, authorid) VALUES ($1, $2, $3, $4)", [timeCreated.rows[0].now, title, article, req.userObj.user_id ]);
 
         let { article_id, article_title, createdon } = articleRes.rows[0];
 
@@ -206,19 +210,22 @@ let deleteGif = async (req, res, next) => {
 
 let commentArticle = async (req, res, next) => {
     try {
-        let comment = req.body.comment;
 
         let timeCreated = await db.query('SELECT NOW()');
-        let commentRes = await db.query('INSERT INTO comments (article_id,user_id, comment, createdon) VALUES ($1, $2, $3, $4) RETURNING *', [req.params.articleId, req.userObj.user_id, comment, timeCreated.rows[0].now]);
+        let commentRes = await db.query('INSERT INTO article_comments (article_id,user_id, comment, createdon) VALUES ($1, $2, $3, $4) RETURNING *', [req.params.articleId, req.userObj.user_id, req.body.comment, timeCreated.rows[0].now]);
 
-        let { article_id, article_title, createdon } = articleRes.rows[0];
+        let commentInfoObj = await db.query("SELECT c.createdon, a.article_title, a.article_body, c.comment FROM articles a JOIN article_comments c ON a.article_id = c.article_id WHERE c.user_id = $1 order by c.createdon desc;", [req.userObj.user_id]);
+
+        let { createdon, article_title, article_body, comment } = commentInfoObj.rows[0];
 
         return res.json({
             status: "success",
             data: {
                 message: "Comment successfully created",
                 createdOn: createdon,
-                title: article_title
+                articleTitle: article_title,
+                article: article_body,
+                comment
             }
         })
     }
@@ -227,6 +234,261 @@ let commentArticle = async (req, res, next) => {
     }
 }
 
+let commentGif = async (req, res, next) => {
+    try {
+
+        let timeCreated = await db.query('SELECT NOW()');
+        let commentRes = await db.query('INSERT INTO gif_comments (gif_id,user_id, comment, createdon) VALUES ($1, $2, $3, $4) RETURNING *', [req.params.gifId, req.userObj.user_id, req.body.comment, timeCreated.rows[0].now]);
+
+        let commentInfoObj = await db.query("SELECT c.createdon, g.gif_title, c.comment FROM gifs g JOIN gif_comments c ON g.gif_id = c.gif_id WHERE c.user_id = $1 order by c.createdon desc;", [req.userObj.user_id]);
+
+        let { createdon, gif_title, comment } = commentInfoObj.rows[0];
+
+        return res.json({
+            status: "success",
+            data: {
+                message: "Comment successfully created",
+                createdOn: createdon,
+                gifTitle: gif_title,
+                comment
+            }
+        })
+    }
+    catch (e) {
+        return next(e);
+    }
+}
+
+let getFeed = async (req, res, next) => {
+    try {
+        let feed = await db.query("SELECT * FROM feed order by feed_id desc");
+    
+        return res.json({
+            status: "success",
+            data: [feed.rows]
+        });
+    }
+    catch (e) {
+        return next(e);
+    }
+}
+
+let getArticle = async (req, res, next) => {
+    try {
+        let articleFetch = await db.query("SELECT article_id, createdon, article_title, article_body FROM articles WHERE article_id = $1", [ req.params.articleId ]);
+
+        let commentFetch = await db.query("SELECT comment_id, comment, user_id FROM article_comments WHERE article_id = $1", [req.params.articleId]);
+
+        let { article_id, createdon, article_title, article_body } = articleFetch.rows[0];
+
+        return res.json({
+            status: "success",
+            data: {
+                id: article_id,
+                createdOn: createdon,
+                title: article_title,
+                article: article_body,
+                comments: [commentFetch.rows]
+            }
+        });
+    }
+    catch (e) {
+        return next(e);
+    }
+}
+
+let getGif = async (req, res, next) => {
+    try {
+        let gifFetch = await db.query("SELECT gif_id, createdon, gif_title, gif_url FROM gifs WHERE gif_id = $1", [ req.params.gifId ]);
+
+        let commentFetch = await db.query("SELECT comment_id, comment, user_id FROM gif_comments WHERE gif_id = $1", [req.params.gifId]);
+
+        let { gif_id, createdon, gif_title, gif_url } = gifFetch.rows[0];
+
+        return res.json({
+            status: "success",
+            data: {
+                id: gif_id,
+                createdOn: createdon,
+                title: gif_title,
+                url: gif_url,
+                comments: [commentFetch.rows]
+            }
+        });
+    }
+    catch (e) {
+        return next(e);
+    }
+}
+
+let flagArticle = async (req, res, next) => {
+    try {
+        let flagQuery = await db.query("UPDATE articles SET flagged = true WHERE article_id = $1 RETURNING *", [req.params.articleId]);
+
+        let { article_title } = flagQuery.rows[0];
+    
+        return res.json({
+            status: "success",
+            message: "Article has been successfully flagged",
+            articleTitle: article_title
+        })
+    }
+    catch (e) {
+        return next(e);
+    }
+
+}
+
+let deleteFlaggedArticle = async (req, res, next) => {
+    try {
+        let deleteQuery = await db.query("DELETE FROM articles WHERE article_id = $1 AND flagged = true RETURNING *", [req.params.articleId]);
+
+        if (!deleteQuery.rows[0]) {
+            return res.json({
+                status: "error",
+                message: "Article is not flagged and cannot be deleted",
+            })
+        }
+        let { article_title } = deleteQuery.rows[0];
+    
+        return res.json({
+            status: "success",
+            message: "Article has been successfully deleted",
+            articleTitle: article_title
+        })
+    }
+    catch (e) {
+        return next(e);
+    }
+
+}
+
+let flagGif = async (req, res, next) => {
+    try {
+        let flagQuery = await db.query("UPDATE gifs SET flagged = true WHERE gif_id = $1 RETURNING *", [req.params.gifId]);
+
+        let { gif_title } = flagQuery.rows[0];
+    
+        return res.json({
+            status: "success",
+            message: "GIF has been successfully flagged",
+            gifTitle: gif_title
+        })
+    }
+    catch (e) {
+        return next(e);
+    }
+
+}
+
+let deleteFlaggedGif = async (req, res, next) => {
+    try {
+        let deleteQuery = await db.query("DELETE FROM gifs WHERE gif_id = $1 AND flagged = true RETURNING *", [req.params.gifId]);
+
+        if (!deleteQuery.rows[0]) {
+            return res.json({
+                status: "error",
+                message: "GIF is not flagged and cannot be deleted",
+            })
+        }
+        let { gif_title } = deleteQuery.rows[0];
+    
+        return res.json({
+            status: "success",
+            message: "GIF has been successfully deleted",
+            gifTitle: gif_title
+        })
+    }
+    catch (e) {
+        return next(e);
+    }
+
+}
+
+let flagArticleComment = async (req, res, next) => {
+    try {
+        let flagQuery = await db.query("UPDATE article_comments SET flagged = true WHERE comment_id = $1 RETURNING *", [req.params.commentId]);
+
+        let { comment } = flagQuery.rows[0];
+    
+        return res.json({
+            status: "success",
+            message: "Comment has been successfully flagged",
+            comment
+        })
+    }
+    catch (e) {
+        return next(e);
+    }
+
+}
+
+let deleteFlaggedArticleComment = async (req, res, next) => {
+    try {
+        let deleteQuery = await db.query("DELETE FROM article_comments WHERE comment_id = $1 AND flagged = true RETURNING *", [req.params.commentId]);
+
+        if (!deleteQuery.rows[0]) {
+            return res.json({
+                status: "error",
+                message: "Comment is not flagged and cannot be deleted",
+            })
+        }
+        let { comment } = deleteQuery.rows[0];
+    
+        return res.json({
+            status: "success",
+            message: "Comment has been successfully deleted",
+            comment
+        })
+    }
+    catch (e) {
+        return next(e);
+    }
+
+}
+
+let flagGifComment = async (req, res, next) => {
+    try {
+        let flagQuery = await db.query("UPDATE gif_comment SET flagged = true WHERE comment_id = $1 RETURNING *", [req.params.commentId]);
+
+        let { comment } = flagQuery.rows[0];
+    
+        return res.json({
+            status: "success",
+            message: "Comment has been successfully flagged",
+            comment
+        })
+    }
+    catch (e) {
+        return next(e);
+    }
+
+}
+
+let deleteFlaggedGifComment = async (req, res, next) => {
+    try {
+        let deleteQuery = await db.query("DELETE FROM gif_comments WHERE comment_id = $1 AND flagged = true RETURNING *", [req.params.commentId]);
+
+        if (!deleteQuery.rows[0]) {
+            return res.json({
+                status: "error",
+                message: "Comment is not flagged and cannot be deleted",
+            })
+        }
+        let { comment } = deleteQuery.rows[0];
+    
+        return res.json({
+            status: "success",
+            message: "Comment has been successfully deleted",
+            comment
+        })
+    }
+    catch (e) {
+        return next(e);
+    }
+
+}
+
 module.exports = {
-    createUser, signIn, postGif, postArticle, editArticle, deleteArticle, deleteGif, commentArticle
+    createUser, signIn, postGif, postArticle, editArticle, deleteArticle, deleteGif, commentArticle, commentGif, getFeed, getArticle, getGif, flagArticle, deleteFlaggedArticle, flagGif, deleteFlaggedGif, flagArticleComment, deleteFlaggedArticleComment, flagGifComment, deleteFlaggedGifComment
 }
