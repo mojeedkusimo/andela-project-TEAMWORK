@@ -79,7 +79,7 @@ let postGif = async (req, res, next) => {
         let timeCreated = await db.query('SELECT NOW()');
 
 
-        let gif = await db.query('INSERT INTO gifs (gif_title, gif_url, createdon, posted_by_user_id) VALUES ($1, $2, $3, $4) RETURNING *', [title, image, timeCreated.rows[0].now, req.userObj.user_id]);
+        let gif = await db.query('INSERT INTO gifs (gif_title, gif_url, createdon, author_id) VALUES ($1, $2, $3, $4) RETURNING *', [title, image, timeCreated.rows[0].now, req.userObj.user_id]);
 
         let feed = await db.query("INSERT INTO feed (createdon, title, article_url, author_id) VALUES ($1, $2, $3, $4)", [timeCreated.rows[0].now, title, image, req.userObj.user_id ]);
 
@@ -106,7 +106,7 @@ let postArticle = async (req, res, next) => {
         let { title, article, tags } = req.body;
 
         let timeCreated = await db.query('SELECT NOW()');
-        let articleRes = await db.query('INSERT INTO articles (article_title, article_body, posted_by_user_id, createdon) VALUES ($1, $2, $3, $4) RETURNING *', [title, article, req.userObj.user_id, timeCreated.rows[0].now]);
+        let articleRes = await db.query('INSERT INTO articles (article_title, article_body, author_id, createdon) VALUES ($1, $2, $3, $4) RETURNING *', [title, article, req.userObj.user_id, timeCreated.rows[0].now]);
 
         let feed = await db.query("INSERT INTO feed (createdon, title, article_url, author_id) VALUES ($1, $2, $3, $4)", [timeCreated.rows[0].now, title, article, req.userObj.user_id ]);
 
@@ -136,7 +136,7 @@ let editArticle = async (req, res, next) => {
     try {
         let { title, article } = req.body;
 
-        let articleRes = await db.query('UPDATE articles SET article_title=$1, article_body=$2 WHERE article_id=$3 AND posted_by_user_id=$4 RETURNING *', [title, article, req.params.articleId, req.userObj.user_id]);
+        let articleRes = await db.query('UPDATE articles SET article_title=$1, article_body=$2 WHERE article_id=$3 AND author_id=$4 RETURNING *', [title, article, req.params.articleId, req.userObj.user_id]);
 
         if ( !articleRes.rows[0] ) {
             return res.json({
@@ -165,7 +165,7 @@ let editArticle = async (req, res, next) => {
 
 let deleteArticle = async (req, res, next) => {
     try {
-        let articleRes = await db.query('DELETE FROM articles WHERE article_id=$1 AND posted_by_user_id=$2 RETURNING *', [req.params.articleId, req.userObj.user_id]);
+        let articleRes = await db.query('DELETE FROM articles WHERE article_id=$1 AND author_id=$2 RETURNING *', [req.params.articleId, req.userObj.user_id]);
 
         if ( !articleRes.rows[0] ) {
             return res.json({
@@ -190,7 +190,7 @@ let deleteArticle = async (req, res, next) => {
 
 let deleteGif = async (req, res, next) => {
     try {
-        let articleRes = await db.query('DELETE FROM gifs WHERE gif_id=$1 AND posted_by_user_id=$2 RETURNING *', [req.params.gifId, req.userObj.user_id]);
+        let articleRes = await db.query('DELETE FROM gifs WHERE gif_id=$1 AND author_id=$2 RETURNING *', [req.params.gifId, req.userObj.user_id]);
         
         if ( !articleRes.rows[0] ) {
             return res.json({
@@ -217,9 +217,9 @@ let commentArticle = async (req, res, next) => {
     try {
 
         let timeCreated = await db.query('SELECT NOW()');
-        let commentRes = await db.query('INSERT INTO article_comments (article_id,user_id, comment, createdon) VALUES ($1, $2, $3, $4) RETURNING *', [req.params.articleId, req.userObj.user_id, req.body.comment, timeCreated.rows[0].now]);
+        let commentRes = await db.query('INSERT INTO article_comments (article_id,author_id, comment, createdon) VALUES ($1, $2, $3, $4) RETURNING *', [req.params.articleId, req.userObj.user_id, req.body.comment, timeCreated.rows[0].now]);
 
-        let commentInfoObj = await db.query("SELECT c.createdon, a.article_title, a.article_body, c.comment FROM articles a JOIN article_comments c ON a.article_id = c.article_id WHERE c.user_id = $1 order by c.createdon desc;", [req.userObj.user_id]);
+        let commentInfoObj = await db.query("SELECT c.createdon, a.article_title, a.article_body, c.comment FROM articles a JOIN article_comments c ON a.article_id = c.article_id WHERE c.author_id = $1 order by c.createdon desc;", [req.userObj.user_id]);
 
         let { createdon, article_title, article_body, comment } = commentInfoObj.rows[0];
 
@@ -243,9 +243,9 @@ let commentGif = async (req, res, next) => {
     try {
 
         let timeCreated = await db.query('SELECT NOW()');
-        let commentRes = await db.query('INSERT INTO gif_comments (gif_id,user_id, comment, createdon) VALUES ($1, $2, $3, $4) RETURNING *', [req.params.gifId, req.userObj.user_id, req.body.comment, timeCreated.rows[0].now]);
+        let commentRes = await db.query('INSERT INTO gif_comments (gif_id, author_id, comment, createdon) VALUES ($1, $2, $3, $4) RETURNING *', [req.params.gifId, req.userObj.user_id, req.body.comment, timeCreated.rows[0].now]);
 
-        let commentInfoObj = await db.query("SELECT c.createdon, g.gif_title, c.comment FROM gifs g JOIN gif_comments c ON g.gif_id = c.gif_id WHERE c.user_id = $1 order by c.createdon desc;", [req.userObj.user_id]);
+        let commentInfoObj = await db.query("SELECT c.createdon, g.gif_title, c.comment FROM gifs g JOIN gif_comments c ON g.gif_id = c.gif_id WHERE c.author_id = $1 order by c.createdon desc;", [req.userObj.user_id]);
 
         let { createdon, gif_title, comment } = commentInfoObj.rows[0];
 
@@ -282,7 +282,21 @@ let getArticle = async (req, res, next) => {
     try {
         let articleFetch = await db.query("SELECT article_id, createdon, article_title, article_body FROM articles WHERE article_id = $1", [ req.params.articleId ]);
 
-        let commentFetch = await db.query("SELECT comment_id, comment, user_id FROM article_comments WHERE article_id = $1", [req.params.articleId]);
+        if (!articleFetch.rows[0]) {
+            return res.json({
+                status: "error",
+                message: "Article does not exist..."
+            });
+        }
+
+        let commentFetch = await db.query("SELECT article_comment_id, comment, author_id FROM article_comments WHERE article_id = $1", [req.params.articleId]);
+
+        let tagFetch = await db.query("SELECT tag FROM tags t JOIN article_tags at ON t.tag_id = at.tag_id WHERE article_id = $1", [req.params.articleId]);
+        let tags = [];
+
+        tagFetch.rows.forEach((val) => {
+            tags.push(val.tag);
+        });
 
         let { article_id, createdon, article_title, article_body } = articleFetch.rows[0];
 
@@ -293,7 +307,8 @@ let getArticle = async (req, res, next) => {
                 createdOn: createdon,
                 title: article_title,
                 article: article_body,
-                comments: [commentFetch.rows]
+                tags,
+                comments: commentFetch.rows
             }
         });
     }
@@ -306,7 +321,14 @@ let getGif = async (req, res, next) => {
     try {
         let gifFetch = await db.query("SELECT gif_id, createdon, gif_title, gif_url FROM gifs WHERE gif_id = $1", [ req.params.gifId ]);
 
-        let commentFetch = await db.query("SELECT comment_id, comment, user_id FROM gif_comments WHERE gif_id = $1", [req.params.gifId]);
+        if (!gifFetch.rows[0]) {
+            return res.json({
+                status: "error",
+                message: "GIF does not exist..."
+            });
+        }
+
+        let commentFetch = await db.query("SELECT gif_comment_id, comment, author_id FROM gif_comments WHERE gif_id = $1", [req.params.gifId]);
 
         let { gif_id, createdon, gif_title, gif_url } = gifFetch.rows[0];
 
@@ -317,7 +339,7 @@ let getGif = async (req, res, next) => {
                 createdOn: createdon,
                 title: gif_title,
                 url: gif_url,
-                comments: [commentFetch.rows]
+                comments: commentFetch.rows
             }
         });
     }
@@ -496,7 +518,7 @@ let deleteFlaggedGifComment = async (req, res, next) => {
 
 let getArticleTag = async (req, res, next) => {
     try {
-        let tagQuery = await db.query("SELECT a.article_id, a.createdon, a.article_title, a.article_body, a.posted_by_user_id FROM articles a join article_tags at ON a.article_id = at.article_id WHERE tag_id=$1", [req.params.tagId]);
+        let tagQuery = await db.query("SELECT a.article_id, a.createdon, a.article_title, a.article_body, a.author_id FROM articles a join article_tags at ON a.article_id = at.article_id WHERE tag_id=$1", [req.params.tagId]);
 
         return res.json({
             status: "success",
