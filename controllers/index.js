@@ -81,7 +81,7 @@ let postGif = async (req, res, next) => {
 
         let gif = await db.query('INSERT INTO gifs (gif_title, gif_url, createdon, posted_by_user_id) VALUES ($1, $2, $3, $4) RETURNING *', [title, image, timeCreated.rows[0].now, req.userObj.user_id]);
 
-        let feed = await db.query("INSERT INTO feed (createdon, title, article_url, authorid) VALUES ($1, $2, $3, $4)", [timeCreated.rows[0].now, title, image, req.userObj.user_id ]);
+        let feed = await db.query("INSERT INTO feed (createdon, title, article_url, author_id) VALUES ($1, $2, $3, $4)", [timeCreated.rows[0].now, title, image, req.userObj.user_id ]);
 
         let { gif_id, gif_title, gif_url, createdon } = gif.rows[0];
 
@@ -103,14 +103,19 @@ let postGif = async (req, res, next) => {
 
 let postArticle = async (req, res, next) => {
     try {
-        let { title, article } = req.body;
-        console.log("Request from controller:\n ",req.userObj);
+        let { title, article, tags } = req.body;
+
         let timeCreated = await db.query('SELECT NOW()');
         let articleRes = await db.query('INSERT INTO articles (article_title, article_body, posted_by_user_id, createdon) VALUES ($1, $2, $3, $4) RETURNING *', [title, article, req.userObj.user_id, timeCreated.rows[0].now]);
 
-        let feed = await db.query("INSERT INTO feed (createdon, title, article_url, authorid) VALUES ($1, $2, $3, $4)", [timeCreated.rows[0].now, title, article, req.userObj.user_id ]);
+        let feed = await db.query("INSERT INTO feed (createdon, title, article_url, author_id) VALUES ($1, $2, $3, $4)", [timeCreated.rows[0].now, title, article, req.userObj.user_id ]);
 
         let { article_id, article_title, createdon } = articleRes.rows[0];
+
+
+        tags.forEach(async (val) => {
+            let tagQuery = await db.query("INSERT INTO article_tags (article_id, tag_id) VALUES ($1, $2)", [article_id, val]);
+        });
 
         return res.json({
             status: "success",
@@ -489,6 +494,20 @@ let deleteFlaggedGifComment = async (req, res, next) => {
 
 }
 
+let getArticleTag = async (req, res, next) => {
+    try {
+        let tagQuery = await db.query("SELECT a.article_id, a.createdon, a.article_title, a.article_body, a.posted_by_user_id FROM articles a join article_tags at ON a.article_id = at.article_id WHERE tag_id=$1", [req.params.tagId]);
+
+        return res.json({
+            status: "success",
+            data: tagQuery.rows
+        })
+    }
+    catch (e) {
+        return next(e);
+    }
+}
+
 module.exports = {
-    createUser, signIn, postGif, postArticle, editArticle, deleteArticle, deleteGif, commentArticle, commentGif, getFeed, getArticle, getGif, flagArticle, deleteFlaggedArticle, flagGif, deleteFlaggedGif, flagArticleComment, deleteFlaggedArticleComment, flagGifComment, deleteFlaggedGifComment
+    createUser, signIn, postGif, postArticle, editArticle, deleteArticle, deleteGif, commentArticle, commentGif, getFeed, getArticle, getGif, flagArticle, deleteFlaggedArticle, flagGif, deleteFlaggedGif, flagArticleComment, deleteFlaggedArticleComment, flagGifComment, deleteFlaggedGifComment, getArticleTag
 }
