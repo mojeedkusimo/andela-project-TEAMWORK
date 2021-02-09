@@ -352,6 +352,13 @@ let flagArticle = async (req, res, next) => {
     try {
         let flagQuery = await db.query("UPDATE articles SET flagged = true WHERE article_id = $1 RETURNING *", [req.params.articleId]);
 
+        if ( !flagQuery.rows[0] ) {
+            return res.json({
+                status: "error",
+                message: "Article was not found"
+            })
+        }
+
         let { article_title } = flagQuery.rows[0];
     
         return res.json({
@@ -368,6 +375,15 @@ let flagArticle = async (req, res, next) => {
 
 let deleteFlaggedArticle = async (req, res, next) => {
     try {
+        let checkQuery = await db.query("SELECT * FROM articles WHERE article_id = $1", [req.params.articleId]);
+
+        if ( !checkQuery.rows[0] ) {
+            return res.json({
+                status: "error",
+                message: "Article was not found"
+            })
+        }
+
         let deleteQuery = await db.query("DELETE FROM articles WHERE article_id = $1 AND flagged = true RETURNING *", [req.params.articleId]);
 
         if (!deleteQuery.rows[0]) {
@@ -394,6 +410,13 @@ let flagGif = async (req, res, next) => {
     try {
         let flagQuery = await db.query("UPDATE gifs SET flagged = true WHERE gif_id = $1 RETURNING *", [req.params.gifId]);
 
+        if ( !flagQuery.rows[0] ) {
+            return res.json({
+                status: "error",
+                message: "GIF was not found"
+            })
+        }
+
         let { gif_title } = flagQuery.rows[0];
     
         return res.json({
@@ -410,6 +433,15 @@ let flagGif = async (req, res, next) => {
 
 let deleteFlaggedGif = async (req, res, next) => {
     try {
+        let checkQuery = await db.query("SELECT * FROM gifs WHERE gif_id = $1", [req.params.gifId]);
+
+        if ( !checkQuery.rows[0] ) {
+            return res.json({
+                status: "error",
+                message: "GIF was not found"
+            })
+        }
+
         let deleteQuery = await db.query("DELETE FROM gifs WHERE gif_id = $1 AND flagged = true RETURNING *", [req.params.gifId]);
 
         if (!deleteQuery.rows[0]) {
@@ -434,13 +466,21 @@ let deleteFlaggedGif = async (req, res, next) => {
 
 let flagArticleComment = async (req, res, next) => {
     try {
-        let flagQuery = await db.query("UPDATE article_comments SET flagged = true WHERE comment_id = $1 RETURNING *", [req.params.commentId]);
+
+        let flagQuery = await db.query("UPDATE article_comments SET flagged = true WHERE article_comment_id = $1 RETURNING *", [req.params.commentId]);
+
+        if ( !flagQuery.rows[0] ) {
+            return res.json({
+                status: "error",
+                message: "Article comment was not found"
+            })
+        }
 
         let { comment } = flagQuery.rows[0];
     
         return res.json({
             status: "success",
-            message: "Comment has been successfully flagged",
+            message: "Article  comment has been successfully flagged",
             comment
         })
     }
@@ -452,19 +492,28 @@ let flagArticleComment = async (req, res, next) => {
 
 let deleteFlaggedArticleComment = async (req, res, next) => {
     try {
-        let deleteQuery = await db.query("DELETE FROM article_comments WHERE comment_id = $1 AND flagged = true RETURNING *", [req.params.commentId]);
+        let checkQuery = await db.query("SELECT * FROM article_comments WHERE article_comment_id = $1", [req.params.commentId]);
+
+        if ( !checkQuery.rows[0] ) {
+            return res.json({
+                status: "error",
+                message: "Article comment was not found"
+            })
+        }
+
+        let deleteQuery = await db.query("DELETE FROM article_comments WHERE article_comment_id = $1 AND flagged = true RETURNING *", [req.params.commentId]);
 
         if (!deleteQuery.rows[0]) {
             return res.json({
                 status: "error",
-                message: "Comment is not flagged and cannot be deleted",
+                message: "Article comment is not flagged and cannot be deleted",
             })
         }
         let { comment } = deleteQuery.rows[0];
     
         return res.json({
             status: "success",
-            message: "Comment has been successfully deleted",
+            message: "Article comment has been successfully deleted",
             comment
         })
     }
@@ -476,13 +525,20 @@ let deleteFlaggedArticleComment = async (req, res, next) => {
 
 let flagGifComment = async (req, res, next) => {
     try {
-        let flagQuery = await db.query("UPDATE gif_comment SET flagged = true WHERE comment_id = $1 RETURNING *", [req.params.commentId]);
+        let flagQuery = await db.query("UPDATE gif_comments SET flagged = true WHERE gif_comment_id = $1 RETURNING *", [req.params.commentId]);
+
+        if ( !flagQuery.rows[0] ) {
+            return res.json({
+                status: "error",
+                message: "GIF comment was not found"
+            })
+        }
 
         let { comment } = flagQuery.rows[0];
     
         return res.json({
             status: "success",
-            message: "Comment has been successfully flagged",
+            message: "GIF comment has been successfully flagged",
             comment
         })
     }
@@ -494,19 +550,28 @@ let flagGifComment = async (req, res, next) => {
 
 let deleteFlaggedGifComment = async (req, res, next) => {
     try {
-        let deleteQuery = await db.query("DELETE FROM gif_comments WHERE comment_id = $1 AND flagged = true RETURNING *", [req.params.commentId]);
+        let checkQuery = await db.query("SELECT * FROM gif_comments WHERE gif_comment_id = $1", [req.params.commentId]);
+
+        if ( !checkQuery.rows[0] ) {
+            return res.json({
+                status: "error",
+                message: "GIF Comment was not found"
+            })
+        }
+
+        let deleteQuery = await db.query("DELETE FROM gif_comments WHERE gif_comment_id = $1 AND flagged = true RETURNING *", [req.params.commentId]);
 
         if (!deleteQuery.rows[0]) {
             return res.json({
                 status: "error",
-                message: "Comment is not flagged and cannot be deleted",
+                message: "GIF comment is not flagged and cannot be deleted",
             })
         }
         let { comment } = deleteQuery.rows[0];
     
         return res.json({
             status: "success",
-            message: "Comment has been successfully deleted",
+            message: "GIF comment has been successfully deleted",
             comment
         })
     }
@@ -518,6 +583,15 @@ let deleteFlaggedGifComment = async (req, res, next) => {
 
 let getArticleTag = async (req, res, next) => {
     try {
+        let checkQuery = await db.query("SELECT * FROM tags WHERE tag_id = $1", [req.params.tagId]);
+
+        if ( !checkQuery.rows[0] ) {
+            return res.json({
+                status: "error",
+                message: "Tag was not found"
+            })
+        }
+
         let tagQuery = await db.query("SELECT a.article_id, a.createdon, a.article_title, a.article_body, a.author_id FROM articles a join article_tags at ON a.article_id = at.article_id WHERE tag_id=$1", [req.params.tagId]);
 
         return res.json({
