@@ -1,4 +1,7 @@
 const jwt = require('jsonwebtoken');
+require("dotenv").config();
+
+const SECRETE_KEY = process.env.SECRETE_KEY
 
 let adminRoutes = (req, res, next) => {
     try {
@@ -11,7 +14,7 @@ let adminRoutes = (req, res, next) => {
             })
         }
 
-        let userObj = jwt.verify(token.split(" ")[1], 'SECRETE');
+        let userObj = jwt.verify(token.split(" ")[1], SECRETE_KEY);
 
         if ( !userObj.isadmin ) {
             return res.json({
@@ -37,7 +40,7 @@ let isLoggedIn = (req, res, next) => {
             })
         }
 
-        let userObj = jwt.verify(token.split(" ")[1], 'SECRETE');
+        let userObj = jwt.verify(token.split(" ")[1], SECRETE_KEY);
 
         req.userObj = userObj;
         return next();   

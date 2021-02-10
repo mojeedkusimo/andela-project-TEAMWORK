@@ -1,8 +1,10 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const db = require("../db");
+require("dotenv").config();
 
-let secret= 'SECRETE';
+const SECRETE_KEY = process.env.SECRETE_KEY
+
 let createUser = async (req, res, next) => {
     try {
         let { firstname, lastname, email, password, gender, jobrole, department,address, isadmin } = req.body;
@@ -16,7 +18,7 @@ let createUser = async (req, res, next) => {
 
         let { user_id } = userObj;
         let userToken = { user_id, firstname, lastname, email, isadmin };
-        let token = jwt.sign(userToken, secret);
+        let token = jwt.sign(userToken, SECRETE_KEY);
 
         return res.json({
             status: "success",
@@ -56,7 +58,7 @@ let signIn = async (req, res, next) => {
 
         let { user_id, firstname, lastname, isadmin } = userObj;
         let userToken = { user_id, firstname, lastname, email, isadmin };
-        let token = jwt.sign(userToken, secret);
+        let token = jwt.sign(userToken, SECRETE_KEY);
 
         console.log(token);
         return res.json({

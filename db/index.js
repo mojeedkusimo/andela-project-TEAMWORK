@@ -1,7 +1,9 @@
 const { Client } = require("pg");
+require("dotenv").config();
+const DB_CON = process.env.DB_CON;
 
 const client = new Client({
-    connectionString: "postgresql:mojeedkusimo:root@localhost/andela_teamwork"
+    connectionString: DB_CON
 });
 
 client.connect();
