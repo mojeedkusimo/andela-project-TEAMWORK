@@ -2,7 +2,7 @@ const router = require("express").Router();
 const { createUser, signIn, postGif, postArticle, editArticle, deleteArticle, deleteGif, commentArticle, commentGif, getFeed, getArticle, getGif, flagArticle, deleteFlaggedArticle, flagGif, deleteFlaggedGif, flagArticleComment, deleteFlaggedArticleComment, flagGifComment, deleteFlaggedGifComment, getArticleTag } = require("../controllers/");
 const { adminRoutes, isLoggedIn } = require("../middlewares")
 
-router.post("/auth/create-user", adminRoutes, createUser)
+router.post("/auth/create-user", createUser)
       .post("/auth/signin", signIn)
       .post("/gifs", isLoggedIn, postGif)
       .post("/articles", isLoggedIn, postArticle)
