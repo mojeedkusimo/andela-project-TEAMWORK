@@ -606,6 +606,21 @@ let getArticleTag = async (req, res, next) => {
     }
 }
 
+let getUsers = async (req, res, next) => {
+    try {
+        const getUsersQuery = await db.query("SELECT * FROM users");
+        const users = getUsersQuery.rows;
+    
+        return res.json({
+            status: "success",
+            message: users
+        })    
+    }
+    catch (e) {
+        return next(e);
+    }
+}
+
 module.exports = {
-    createUser, signIn, postGif, postArticle, editArticle, deleteArticle, deleteGif, commentArticle, commentGif, getFeed, getArticle, getGif, flagArticle, deleteFlaggedArticle, flagGif, deleteFlaggedGif, flagArticleComment, deleteFlaggedArticleComment, flagGifComment, deleteFlaggedGifComment, getArticleTag
+    createUser, signIn, postGif, postArticle, editArticle, deleteArticle, deleteGif, commentArticle, commentGif, getFeed, getArticle, getGif, flagArticle, deleteFlaggedArticle, flagGif, deleteFlaggedGif, flagArticleComment, deleteFlaggedArticleComment, flagGifComment, deleteFlaggedGifComment, getArticleTag, getUsers
 }

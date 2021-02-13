@@ -1,5 +1,5 @@
 const router = require("express").Router();
-const { createUser, signIn, postGif, postArticle, editArticle, deleteArticle, deleteGif, commentArticle, commentGif, getFeed, getArticle, getGif, flagArticle, deleteFlaggedArticle, flagGif, deleteFlaggedGif, flagArticleComment, deleteFlaggedArticleComment, flagGifComment, deleteFlaggedGifComment, getArticleTag } = require("../controllers/");
+const { createUser, signIn, postGif, postArticle, editArticle, deleteArticle, deleteGif, commentArticle, commentGif, getFeed, getArticle, getGif, flagArticle, deleteFlaggedArticle, flagGif, deleteFlaggedGif, flagArticleComment, deleteFlaggedArticleComment, flagGifComment, deleteFlaggedGifComment, getArticleTag, getUsers } = require("../controllers/");
 const { adminRoutes, isLoggedIn } = require("../middlewares")
 
 router.post("/auth/create-user", createUser)
@@ -8,6 +8,7 @@ router.post("/auth/create-user", createUser)
       .post("/articles", isLoggedIn, postArticle)
       .post("/articles/:articleId/comment", isLoggedIn, commentArticle)
       .post("/gifs/:gifId/comment", isLoggedIn, commentGif)
+      .get("/users", getUsers)
       .get("/feed", isLoggedIn, getFeed)
       .get("/articles/:articleId", isLoggedIn, getArticle)
       .get("/gifs/:gifId", isLoggedIn, getGif)
