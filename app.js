@@ -13,6 +13,9 @@ app.get("/", (req, res) => {
 })
 
 app.use("/api", routes);
+app.use("/api", (req, res) => {
+    return res.send("This is the route for each API endpoint on Andela Project TEAMWORK. Kindly check documentation to test each endpoint.")
+});
 
 app.use((req, res, next) => {
     let error = new Error("Page Not Found");

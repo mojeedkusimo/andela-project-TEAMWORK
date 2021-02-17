@@ -1,1 +1,1 @@
-## All Endpoints can be tested here: https://andela-teamwork.herokuapp.com/api/
+## All Endpoints can be tested here: https://andela-teamwork.herokuapp.com/api/ and check documentation to test each endpoint
