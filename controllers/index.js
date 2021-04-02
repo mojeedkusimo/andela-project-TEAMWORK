@@ -105,19 +105,25 @@ let postGif = async (req, res, next) => {
 
 let postArticle = async (req, res, next) => {
     try {
-        let { title, article, tags } = req.body;
+        // let { title, article, tags } = req.body;
+        let { user_id, title, article } = req.body;
 
         let timeCreated = await db.query('SELECT NOW()');
-        let articleRes = await db.query('INSERT INTO articles (article_title, article_body, author_id, createdon) VALUES ($1, $2, $3, $4) RETURNING *', [title, article, req.userObj.user_id, timeCreated.rows[0].now]);
+        // let articleRes = await db.query('INSERT INTO articles (article_title, article_body, author_id, createdon) VALUES ($1, $2, $3, $4) RETURNING *', [title, article, req.userObj.user_id, timeCreated.rows[0].now]);
 
-        let feed = await db.query("INSERT INTO feed (createdon, title, article_url, author_id) VALUES ($1, $2, $3, $4)", [timeCreated.rows[0].now, title, article, req.userObj.user_id ]);
+        let articleRes = await db.query('INSERT INTO articles (article_title, article_body, author_id, createdon) VALUES ($1, $2, $3, $4) RETURNING *', [title, article, user_id, timeCreated.rows[0].now]);
+
+        // let feed = await db.query("INSERT INTO feed (createdon, title, article_url, author_id) VALUES ($1, $2, $3, $4)", [timeCreated.rows[0].now, title, article, req.userObj.user_id ]);
+
+        let feed = await db.query("INSERT INTO feed (createdon, title, article_url, author_id) VALUES ($1, $2, $3, $4)", [timeCreated.rows[0].now, title, article, user_id ]);
+
 
         let { article_id, article_title, createdon } = articleRes.rows[0];
 
 
-        tags.forEach(async (val) => {
-            let tagQuery = await db.query("INSERT INTO article_tags (article_id, tag_id) VALUES ($1, $2)", [article_id, val]);
-        });
+        // tags.forEach(async (val) => {
+        //     let tagQuery = await db.query("INSERT INTO article_tags (article_id, tag_id) VALUES ($1, $2)", [article_id, val]);
+        // });
 
         return res.json({
             status: "success",
@@ -170,6 +176,31 @@ let deleteArticle = async (req, res, next) => {
         let articleRes = await db.query('DELETE FROM articles WHERE article_id=$1 AND author_id=$2 RETURNING *', [req.params.articleId, req.userObj.user_id]);
 
         if ( !articleRes.rows[0] ) {
+            return res.json({
+                status: "error",
+                data: {
+                    message: "Access Denied!"
+                }
+            })
+        }
+
+        return res.json({
+            status: "success",
+            data: {
+                message: "Article successfully deleted"
+            }
+        })
+    }
+    catch (e) {
+        return next(e);
+    }
+}
+
+let deleteFeed = async (req, res, next) => {
+    try {
+        let FeedRes = await db.query('DELETE FROM feed WHERE feed_id=$1 AND author_id=$2 RETURNING *', [req.body.feed_id, req.body.user_id]);
+
+        if ( !FeedRes.rows[0] ) {
             return res.json({
                 status: "error",
                 data: {
@@ -268,7 +299,7 @@ let commentGif = async (req, res, next) => {
 
 let getFeed = async (req, res, next) => {
     try {
-        let feed = await db.query("SELECT * FROM feed order by feed_id desc");
+        let feed = await db.query("SELECT f.feed_id, f.createdon, f.title, f.article_url, u.firstname FROM feed f join users u ON f.author_id = u.user_id order by feed_id desc");
     
         return res.json({
             status: "success",
@@ -282,7 +313,7 @@ let getFeed = async (req, res, next) => {
 
 let getArticle = async (req, res, next) => {
     try {
-        let articleFetch = await db.query("SELECT article_id, createdon, article_title, article_body FROM articles WHERE article_id = $1", [ req.params.articleId ]);
+        let articleFetch = await db.query("SELECT a.article_id, u.firstname, a.createdon, a.article_title, a.article_body FROM articles a join users u ON u.user_id = a.author_id WHERE article_id = $1", [ req.params.articleId ]);
 
         if (!articleFetch.rows[0]) {
             return res.json({
@@ -300,12 +331,13 @@ let getArticle = async (req, res, next) => {
             tags.push(val.tag);
         });
 
-        let { article_id, createdon, article_title, article_body } = articleFetch.rows[0];
+        let { firstname, article_id, createdon, article_title, article_body } = articleFetch.rows[0];
 
         return res.json({
             status: "success",
             data: {
                 id: article_id,
+                firstname,
                 createdOn: createdon,
                 title: article_title,
                 article: article_body,
@@ -621,6 +653,21 @@ let getUsers = async (req, res, next) => {
     }
 }
 
+let getUser = async (req, res, next) => {
+    try {
+        const getUserQuery = await db.query("SELECT * FROM users WHERE user_id = $1", [req.params.userId]);
+        const user = getUserQuery.rows;
+    
+        return res.json({
+            status: "success",
+            message: user
+        })    
+    }
+    catch (e) {
+        return next(e);
+    }
+}
+
 module.exports = {
-    createUser, signIn, postGif, postArticle, editArticle, deleteArticle, deleteGif, commentArticle, commentGif, getFeed, getArticle, getGif, flagArticle, deleteFlaggedArticle, flagGif, deleteFlaggedGif, flagArticleComment, deleteFlaggedArticleComment, flagGifComment, deleteFlaggedGifComment, getArticleTag, getUsers
+    createUser, signIn, postGif, postArticle, editArticle, deleteArticle, deleteGif, commentArticle, commentGif, getFeed, getArticle, getGif, flagArticle, deleteFlaggedArticle, flagGif, deleteFlaggedGif, flagArticleComment, deleteFlaggedArticleComment, flagGifComment, deleteFlaggedGifComment, getArticleTag, getUsers, getUser, deleteFeed
 }

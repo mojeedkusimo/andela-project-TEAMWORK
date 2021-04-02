@@ -1,15 +1,16 @@
 const router = require("express").Router();
-const { createUser, signIn, postGif, postArticle, editArticle, deleteArticle, deleteGif, commentArticle, commentGif, getFeed, getArticle, getGif, flagArticle, deleteFlaggedArticle, flagGif, deleteFlaggedGif, flagArticleComment, deleteFlaggedArticleComment, flagGifComment, deleteFlaggedGifComment, getArticleTag, getUsers } = require("../controllers/");
+const { createUser, signIn, postGif, postArticle, editArticle, deleteArticle, deleteGif, commentArticle, commentGif, getFeed, getArticle, getGif, flagArticle, deleteFlaggedArticle, flagGif, deleteFlaggedGif, flagArticleComment, deleteFlaggedArticleComment, flagGifComment, deleteFlaggedGifComment, getArticleTag, getUsers, getUser, deleteFeed } = require("../controllers/");
 const { adminRoutes, isLoggedIn } = require("../middlewares")
 
-router.post("/auth/create-user", adminRoutes, createUser)
+router.post("/auth/create-user", createUser)
       .post("/auth/signin", signIn)
       .post("/gifs", isLoggedIn, postGif)
-      .post("/articles", isLoggedIn, postArticle)
+      .post("/articles", postArticle)
       .post("/articles/:articleId/comment", isLoggedIn, commentArticle)
       .post("/gifs/:gifId/comment", isLoggedIn, commentGif)
+      .get("/user/:userId", getUser)
       .get("/users", getUsers)
-      .get("/feed", isLoggedIn, getFeed)
+      .get("/feed",  getFeed)
       .get("/articles/:articleId", isLoggedIn, getArticle)
       .get("/gifs/:gifId", isLoggedIn, getGif)
       .get("/tags/:tagId", isLoggedIn, getArticleTag)
@@ -24,5 +25,6 @@ router.post("/auth/create-user", adminRoutes, createUser)
       .delete("/flag/comments/gif/:commentId", adminRoutes, deleteFlaggedGifComment)
       .delete("/articles/:articleId", isLoggedIn, deleteArticle)
       .delete("/gifs/:gifId", isLoggedIn, deleteGif)
+      .delete("/feed/:feedId", deleteFeed)
 
 module.exports = router;

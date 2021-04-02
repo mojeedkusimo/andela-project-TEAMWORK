@@ -10,7 +10,7 @@ let adminRoutes = (req, res, next) => {
         if ( !token ) {
             return res.json({
                 status: 'error',
-                error: 'Please register on our platform to get access..'
+                error: 'Unathourized!...'
             })
         }
 
